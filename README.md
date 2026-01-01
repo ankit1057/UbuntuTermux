@@ -1,18 +1,22 @@
-# Minimal Ubuntu Proot for Termux
 
-**Repository:** https://github.com/ankit1057/UbuntuTermux
+# UbuntuTermux
 
-This project provides:
-
-📌 A **minimal Ubuntu installation** inside Termux  
-📌 A **normal Linux user** (not root)  
-📌 A **wget / curl install script**  
-📌 Auto **timezone detection**  
-📌 A web-hosted **GitHub Pages guide**
+A **minimal, production-grade Ubuntu Linux environment inside Termux**  
+✔ No root  
+✔ Normal Linux user  
+✔ Sudo access  
+✔ Auto timezone  
+✔ One-command install  
+✔ `ubuntu` shortcut command
 
 ---
 
-## 📥 Install in One Line
+## 🚀 One-Command Install (Fresh Termux)
+
+Copy-paste **exactly this** into Termux:
 
 ```bash
-wget -qO- https://ankit1057.github.io/UbuntuTermux/install.sh | bash
+yes | termux-change-repo && \
+pkg update -y && pkg upgrade -y && \
+pkg install -y wget proot-distro && \
+wget -qO- https://raw.githubusercontent.com/ankit1057/UbuntuTermux/main/install.sh | bash
