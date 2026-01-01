@@ -1,2 +1,18 @@
-# UbuntuTermux
-Want a real Ubuntu environment on Android without root, without bloat, and with a normal (non-root) user? In this video, I show you how to install a minimal Ubuntu proot distro using Termux, keeping it lightweight, fast, and dev-friendly.
+# Minimal Ubuntu Proot for Termux
+
+**Repository:** https://github.com/ankit1057/UbuntuTermux
+
+This project provides:
+
+📌 A **minimal Ubuntu installation** inside Termux  
+📌 A **normal Linux user** (not root)  
+📌 A **wget / curl install script**  
+📌 Auto **timezone detection**  
+📌 A web-hosted **GitHub Pages guide**
+
+---
+
+## 📥 Install in One Line
+
+```bash
+wget -qO- https://ankit1057.github.io/UbuntuTermux/install.sh | bash
