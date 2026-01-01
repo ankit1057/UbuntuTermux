@@ -2,27 +2,28 @@
 set -euo pipefail
 
 ###############################################################################
-# Minimal Ubuntu Proot Installer (PIPE-SAFE)
+# Minimal Ubuntu Proot Installer (PIPE + TTY SAFE)
 # - Works with: wget -qO- URL | bash
-# - Normal user + sudo
-# - Android timezone autodetect
+# - Creates normal user + sudo
+# - Auto-detects Android timezone
+# - Adds `ubuntu` shortcut command
 ###############################################################################
 
-# Ensure we can read from a real TTY even when piped
-if [ ! -t 0 ]; then
-  TTY=/dev/tty
+# Ensure TTY access when piped
+if [ -t 0 ]; then
+  TTY="/dev/stdin"
 else
-  TTY=/dev/stdin
+  TTY="/dev/tty"
 fi
 
 echo "=======================================" >"$TTY"
 echo " Minimal Ubuntu Proot Installer" >"$TTY"
-echo " Normal User + Sudo + Timezone Auto-Set" >"$TTY"
+echo " Normal User + Sudo + Auto Login Alias" >"$TTY"
 echo "=======================================" >"$TTY"
 echo >"$TTY"
 
 ###############################################################################
-# Termux sanity checks
+# Termux sanity check
 ###############################################################################
 
 if ! command -v pkg >/dev/null 2>&1; then
@@ -45,7 +46,7 @@ fi
 ###############################################################################
 
 while true; do
-  read -r -p "Enter Linux username (lowercase, no spaces): " USERNAME <"$TTY"
+  read -r -p "Enter Linux username (lowercase only): " USERNAME <"$TTY"
   if [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
     break
   else
@@ -74,19 +75,18 @@ while true; do
 done
 
 ###############################################################################
-# Timezone detection (Android)
+# Timezone detection
 ###############################################################################
 
 echo >"$TTY"
 echo "[*] Detecting Android timezone..." >"$TTY"
 
 TZ_ANDROID="$(getprop persist.sys.timezone 2>/dev/null || true)"
-
 if [[ -z "$TZ_ANDROID" ]]; then
   TZ_ANDROID="UTC"
-  echo "⚠️  Timezone not detected. Defaulting to UTC." >"$TTY"
+  echo "⚠️  Timezone not detected, defaulting to UTC." >"$TTY"
 else
-  echo "✔ Detected timezone: $TZ_ANDROID" >"$TTY"
+  echo "✔ Timezone detected: $TZ_ANDROID" >"$TTY"
 fi
 
 ###############################################################################
@@ -108,18 +108,15 @@ echo "[*] Configuring Ubuntu..." >"$TTY"
 
 proot-distro login ubuntu -- bash <<EOF
 set -e
-
 export DEBIAN_FRONTEND=noninteractive
 
 apt update
 apt install -y sudo tzdata ca-certificates
 
-# Timezone
 ln -sf /usr/share/zoneinfo/$TZ_ANDROID /etc/localtime
 echo "$TZ_ANDROID" > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
 
-# User
 if ! id "$USERNAME" >/dev/null 2>&1; then
   useradd -m -s /bin/bash "$USERNAME"
 fi
@@ -127,11 +124,42 @@ fi
 echo "$USERNAME:$PASS1" | chpasswd
 usermod -aG sudo "$USERNAME"
 
-# Cleanup (keep minimal)
 apt purge -y snapd man-db info || true
 apt autoremove -y
 apt clean
 EOF
+
+###############################################################################
+# Create helper script + alias
+###############################################################################
+
+echo >"$TTY"
+echo "[*] Creating ubuntu shortcut command..." >"$TTY"
+
+BIN_DIR="$HOME/.local/bin"
+HELPER="$BIN_DIR/ubuntu.sh"
+
+mkdir -p "$BIN_DIR"
+
+cat > "$HELPER" <<EOS
+#!/data/data/com.termux/files/usr/bin/bash
+
+STORAGE_BIND=""
+if [ -d "/sdcard" ]; then
+  STORAGE_BIND="--bind /sdcard:/home/$USERNAME/storage"
+fi
+
+exec proot-distro login ubuntu --user $USERNAME \$STORAGE_BIND
+EOS
+
+chmod +x "$HELPER"
+
+BASHRC="$HOME/.bashrc"
+if ! grep -q "alias ubuntu=" "$BASHRC" 2>/dev/null; then
+  echo "" >>"$BASHRC"
+  echo "# Ubuntu proot shortcut" >>"$BASHRC"
+  echo "alias ubuntu='$HELPER'" >>"$BASHRC"
+fi
 
 ###############################################################################
 # Done
@@ -142,12 +170,8 @@ echo "=======================================" >"$TTY"
 echo " ✅ Installation Complete" >"$TTY"
 echo "=======================================" >"$TTY"
 echo >"$TTY"
-echo "Login with:" >"$TTY"
-echo "  proot-distro login ubuntu --user $USERNAME" >"$TTY"
+echo "Restart Termux, then run:" >"$TTY"
+echo "  ubuntu" >"$TTY"
 echo >"$TTY"
-echo "Optional (Android storage):" >"$TTY"
-echo "  termux-setup-storage" >"$TTY"
-echo "  proot-distro login ubuntu --user $USERNAME \\" >"$TTY"
-echo "    --bind /sdcard:/home/$USERNAME/storage" >"$TTY"
-echo >"$TTY"
+echo "Android storage will auto-mount if permission is granted." >"$TTY"
 echo "Enjoy your minimal Ubuntu 🚀" >"$TTY"
